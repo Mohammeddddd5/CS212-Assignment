@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <sstream>
 #include <algorithm>
 #include <cctype>
 
@@ -44,8 +45,13 @@ protected:
         return index_array;
     }
 public:
-    int HexToDecimal(string a){
-        return stoi(a, nullptr, 16);
+    int HexToDecimal(string Hex){
+        return stoi(Hex, nullptr, 16);
+    }
+    string DecToHex(int Dec) {
+        stringstream ss;
+        ss << hex << uppercase << Dec;
+        return ss.str();
     }
 };
 
@@ -142,9 +148,13 @@ public:
 vector<Register> Register::Registers(16);
 
 
-class CPU{
+class CPU: public ALU, public Register{
+    private:
     int PC;
-
+    string IR;
+    Register Reg;
+    ALU alu;
+    public:
 };
 
 
@@ -155,13 +165,17 @@ class Vole_Machine{
 
 
 int main(){
-    Memory mem;
-    mem.StoreInstruction("102B");
-    mem.StoreInstruction("2096");
-    mem.StoreInstruction("2013");
-    mem.StoreInstruction("1919");
-    mem.StoreValue("10","FF");
-    mem.DisplayMemory();
+    // Memory mem;
+    // mem.StoreInstruction("102B");
+    // mem.StoreInstruction("2096");
+    // mem.StoreInstruction("2013");
+    // mem.StoreInstruction("1919");
+    // mem.StoreValue("10","FF");
+    // mem.DisplayMemory();
+
+    // ALU test;
+    // cout << test.DecToHex(166) << endl;
+    // cout << test.HexToDecimal("FF") << endl;
 
     // Register R1('1', "66");
     // R1.ChangeRegister("A5");
