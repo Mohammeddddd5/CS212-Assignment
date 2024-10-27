@@ -4,6 +4,7 @@
 #include <sstream>
 #include <algorithm>
 #include <cctype>
+#include <utility>
 
 using namespace std;
 
@@ -55,6 +56,10 @@ public:
     }
 };
 
+class CU{
+
+};
+
 
 class Memory: public ALU{
 private:
@@ -100,60 +105,67 @@ public:
 };
 
 
+
 class Register{
 private:
-    string RegisterName = "R";
-    string InsideRegister = "00";
-    static vector<Register> Registers;
+    static vector<pair<string, string>> Registers;
 public:
-    Register(char R, string Inside){
-        RegisterName.push_back(R);
-        InsideRegister = Inside;
-        if(isdigit(R)){
-            int index = R - '0';
-            Registers[index] = *this;
+    Register(){
+        if (Registers.empty()) {
+            Registers.resize(16, make_pair("R", "0"));
         }
-        else{
-            switch(R){
-                case 'A': Registers[10] = *this; break;
-                case 'B': Registers[11] = *this; break;
-                case 'C': Registers[12] = *this; break;
-                case 'D': Registers[13] = *this; break;
-                case 'E': Registers[14] = *this; break;
-                case 'F': Registers[15] = *this; break;
+    }
+    Register(const string &RegName, const string &InsideValue){
+        if (Registers.empty()) {
+            Registers.resize(16, make_pair("R", "0"));
+        }
+        StoreRegister(RegName, InsideValue);
+    }
+    void StoreRegister(const string &RegName, const string &InsideValue){
+        bool found = false;
+        for(auto &reg : Registers){
+            if(reg.first == RegName){
+                reg.second = InsideValue;
+                found = true;
+                break;
+            }
+        }
+        if(!found){
+            for(auto &reg : Registers){
+                if(reg.first == "R"){
+                    reg.first = RegName;
+                    reg.second = InsideValue;
+                    break;
+                }
             }
         }
     }
-    Register(){
-    }
-    string getRegisterName() const{
-        return RegisterName;
-    }
-    string getInsideRegister() const{
-        return InsideRegister;
-    }
-    void ChangeRegister(string New_InsideRegister){
-        InsideRegister = New_InsideRegister;
+    string GetRegisterContent(const string &RegName) const{
+        for(const auto &reg : Registers){
+            if(reg.first == RegName){
+                return reg.second;
+            }
+        }
+        return "0";
     }
     static void Display_Registers(){
-        for(short i = 0; i < Registers.size(); i++){
-            if(Registers[i].getRegisterName() == "R"){
-                continue;
+        for(const auto &reg : Registers){
+            if(reg.first != "R"){
+                cout << "[ " << reg.first << ": " << reg.second << " ]" << endl;
             }
-            cout << "[ " << Registers[i].getRegisterName() << ": " << Registers[i].getInsideRegister() << " ]" << endl;
         }
     }
 };
 
-vector<Register> Register::Registers(16);
+vector<pair<string, string>> Register::Registers;
 
-
-class CPU: public ALU, public Register{
+class CPU{
     private:
     int PC;
     string IR;
     Register Reg;
     ALU alu;
+    CU Cu;
     public:
 };
 
@@ -165,21 +177,21 @@ class Vole_Machine{
 
 
 int main(){
-    // Memory mem;
-    // mem.StoreInstruction("102B");
-    // mem.StoreInstruction("2096");
-    // mem.StoreInstruction("2013");
-    // mem.StoreInstruction("1919");
-    // mem.StoreValue("10","FF");
-    // mem.DisplayMemory();
+    Memory mem;
+    mem.StoreInstruction("102B");
+    mem.StoreInstruction("2096");
+    mem.StoreInstruction("2013");
+    mem.StoreInstruction("1919");
+    mem.StoreValue("10","FF");
+    mem.DisplayMemory();
 
-    // ALU test;
-    // cout << test.DecToHex(166) << endl;
-    // cout << test.HexToDecimal("FF") << endl;
+    ALU test;
+    cout << test.DecToHex(166) << endl;
+    cout << test.HexToDecimal("FF") << endl;
 
-    // Register R1('1', "66");
-    // R1.ChangeRegister("A5");
-    // Register RB('B', "55");
-    // Register::Display_Registers();
-
+    Register reg;
+    reg.StoreRegister("R0","55");
+    reg.StoreRegister("R4","F5");
+    reg.StoreRegister("R2","AB");
+    reg.Display_Registers();
 }
