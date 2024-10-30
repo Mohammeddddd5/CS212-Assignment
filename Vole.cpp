@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cctype>
 #include <utility>
+#include <regex>
 
 using namespace std;
 
@@ -16,7 +17,10 @@ using namespace std;
 // 5RST, Add whatever is in Register S and in Register T [IN 2'S COMPLEMENT FORM] and put the result in Register R
 // 6RST, same as 5RST but in floating-point form
 // BRXY [B543], Compare whatever in Register 5 to whatever in Register 0, if both are Equal, Jump to memory place 43, if theyre not equal skip
-// C000, Stop Executing the porgram.
+// C000, Stop Executing the porgram
+
+class Memory;
+class Register;
 
 
 class ALU{
@@ -54,10 +58,50 @@ public:
         ss << hex << uppercase << Dec;
         return ss.str();
     }
+    bool IsAValid_Instruction(string instruction){
+        regex Reg("^[1-6BC][1-9A-F]{3}$");
+        if(regex_match(instruction, Reg)){
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
 };
 
-class CU{
+class CU : public ALU {
+public:
+    void Execute_1RXY(Memory &memory, Register &Reg, const string &Instruction) {
+        // Implementation here
+    }
 
+    void Execute_2RXY(Memory &memory, Register &Reg, const string &Instruction) {
+        // Implementation here
+    }
+
+    void Execute_3RXY(Memory &memory, Register &Reg, const string &Instruction) {
+
+    }
+
+    void Execute_40RS(Memory &memory, Register &Reg, const string &Instruction) {
+
+    }
+
+    void Execute_5RST(Memory &memory, Register &Reg, const string &Instruction) {
+        // Implementation here
+    }
+
+    void Execute_6RST(Memory &memory, Register &Reg, const string &Instruction) {
+        // Implementation here
+    }
+
+    void Execute_BRXY(Memory &memory, Register &Reg, const string &Instruction) {
+        // Implementation here
+    }
+
+    void Execute_C000(Memory &memory, Register &Reg, const string &Instruction) {
+        // Implementation here
+    }
 };
 
 
@@ -84,6 +128,11 @@ public:
         int col2 = (CurrentStorage + 1) % 16;
         Memory[row2][col2] = second_2;
         CurrentStorage += 2;
+    }
+
+    string GetValue(string Pattern){
+        vector<int> Location = identify_memory(Pattern);
+        return Memory[Location[0]][Location[1]];
     }
 
     void DisplayMemory(){
@@ -159,39 +208,82 @@ public:
 
 vector<pair<string, string>> Register::Registers;
 
-class CPU{
-    private:
-    int PC;
+
+class CPU : public ALU {
+private:
     string IR;
     Register Reg;
-    ALU alu;
     CU Cu;
-    public:
+    int PC = 0;
+public:
+    void Execute_Step(const string &Step, Memory &memory) {
+        if (IsAValid_Instruction(Step)) {
+            switch (toupper(Step[0])) {
+                case '1':
+                    Cu.Execute_1RXY(memory, Reg, Step);
+                    break;
+                case '2':
+                    Cu.Execute_2RXY(memory, Reg, Step);
+                    break;
+                case '3':
+                    Cu.Execute_3RXY(memory, Reg, Step);
+                    break;
+                case '4':
+                    Cu.Execute_40RS(memory, Reg, Step);
+                    break;
+                case '5':
+                    Cu.Execute_5RST(memory, Reg, Step);
+                    break;
+                case '6':
+                    Cu.Execute_6RST(memory, Reg, Step);
+                    break;
+                case 'B':
+                    Cu.Execute_BRXY(memory, Reg, Step);
+                    break;
+                case 'C':
+                    Cu.Execute_C000(memory, Reg, Step);
+                    break;
+            }
+        }
+    }
 };
 
 
 
-class Vole_Machine{
-
+class Vole_Machine : public ALU{
+    private:
+    CPU processor;
+    Memory program_memory;
+    public:
+    void Execute_Program(string filepath){
+        fstream file(filepath, ios::in);
+        string line;
+        while(!file.eof()){
+            getline(file, line);
+            if(IsAValid_Instruction(line)){
+                processor.Execute_Step(line, program_memory);
+            }
+        }
+    }
 };
 
 
 int main(){
-    Memory mem;
-    mem.StoreInstruction("102B");
-    mem.StoreInstruction("2096");
-    mem.StoreInstruction("2013");
-    mem.StoreInstruction("1919");
-    mem.StoreValue("10","FF");
-    mem.DisplayMemory();
+    // Memory mem;
+    // mem.StoreInstruction("102B");
+    // mem.StoreInstruction("2096");
+    // mem.StoreInstruction("2013");
+    // mem.StoreInstruction("1919");
+    // mem.StoreValue("10","FF");
+    // mem.DisplayMemory();
 
-    ALU test;
-    cout << test.DecToHex(166) << endl;
-    cout << test.HexToDecimal("FF") << endl;
+    // ALU test;
+    // cout << test.DecToHex(166) << endl;
+    // cout << test.HexToDecimal("FF") << endl;
 
-    Register reg;
-    reg.StoreRegister("R0","55");
-    reg.StoreRegister("R4","F5");
-    reg.StoreRegister("R2","AB");
-    reg.Display_Registers();
+    // Register reg;
+    // reg.StoreRegister("R0","55");
+    // reg.StoreRegister("R4","F5");
+    // reg.StoreRegister("R2","AB");
+    // reg.Display_Registers();
 }
