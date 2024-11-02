@@ -14,10 +14,15 @@ using namespace std;
 // 2RXY [2058], Store in Register 0 number 58 [XY]
 // 3RXY [31A1], Store in Memory A1 whatever in Register 1 
 // 40RS [4056], Store in Register 5 whatever in Register 5
-// 5RST, Add whatever is in Register S and in Register T [IN 2'S COMPLEMENT FORM] and put the result in Register R
+// 5RST, Add whatever is in Register S and in Register T [IN 2'S COMPLEMENT FORM] and put the result in Register 
 // 6RST, same as 5RST but in floating-point form
+// 7RST, Bitwise (OR) the content of register S and T and put the result in register R ~BONUS~
+// 8RST, Bitwise (AND) the content of register S and T and put the result in register R ~BONUS~
+// 9RST, Bitwise (XOR) the content of register S and T and put the result in register R ~BONUS~
+// ARxX, Rotate the content of Register R cyclically right X steps ~BONUS~
 // BRXY [B543], Compare whatever in Register 5 to whatever in Register 0, if both are Equal, Jump to memory place 43, if theyre not equal skip
 // C000, Stop Executing the porgram
+// DRXY, Jump to instruction in Cell XY, if content of register R is greater than the content in Register 0, data is interpreted as integers in two's complement notation ~BONUS~
 
 class Memory;
 class Register;
@@ -59,7 +64,7 @@ public:
         return ss.str();
     }
     bool IsAValid_Instruction(string instruction){
-        regex Reg("^[1-6BC][1-9A-F]{3}$");
+        regex Reg("^[1-9A-D][0-9A-F]{3}$");
         if(regex_match(instruction, Reg)){
             return true;
         }
@@ -69,14 +74,79 @@ public:
     }
 };
 
+class Register{
+private:
+    static vector<pair<string, string>> Registers;
+public:
+    Register(){
+        if(Registers.empty()){
+            Registers.resize(16, make_pair("R", "0"));
+        }
+    }
+    Register(const string &RegName, const string &InsideValue){
+        if(Registers.empty()){
+            Registers.resize(16, make_pair("R", "0"));
+        }
+        StoreRegister(RegName, InsideValue);
+    }
+    void StoreRegister(const string &RegName, const string &InsideValue){
+        bool found = false;
+        for(auto &reg : Registers){
+            if(reg.first == RegName){
+                reg.second = InsideValue;
+                found = true;
+                break;
+            }
+        }
+        if(!found){
+            for(auto &reg : Registers){
+                if(reg.first == "R"){
+                    reg.first = RegName;
+                    reg.second = InsideValue;
+                    break;
+                }
+            }
+        }
+    }
+    void FindANDStore(string regname, string store){
+        bool found = false;
+        for(short i{0}; i < Registers.size(); i++){
+            if(Registers[i].first == regname){
+                Registers[i].second = store;
+                found = true;
+            }
+        }
+        if(!found){
+            StoreRegister(regname, store);
+        }
+    }
+    string GetRegisterContent(const string &RegName) const{
+        for(const auto &reg : Registers){
+            if(reg.first == RegName){
+                return reg.second;
+            }
+        }
+        return "0";
+    }
+    static void Display_Registers(){
+        for(const auto &reg : Registers){
+            if(reg.first != "R"){
+                cout << "[ " << reg.first << ": " << reg.second << " ]" << endl;
+            }
+        }
+    }
+};
+
+vector<pair<string, string>> Register::Registers; 
+
 class CU : public ALU {
 public:
     void Execute_1RXY(Memory &memory, Register &Reg, const string &Instruction) {
-        // Implementation here
+        
     }
 
     void Execute_2RXY(Memory &memory, Register &Reg, const string &Instruction) {
-        // Implementation here
+        
     }
 
     void Execute_3RXY(Memory &memory, Register &Reg, const string &Instruction) {
@@ -88,18 +158,71 @@ public:
     }
 
     void Execute_5RST(Memory &memory, Register &Reg, const string &Instruction) {
-        // Implementation here
+        
     }
 
     void Execute_6RST(Memory &memory, Register &Reg, const string &Instruction) {
-        // Implementation here
+        int result;
+        cout << "Execution:" << endl;
+        string registerR = "R";
+        registerR.push_back(Instruction[1]);
+        string registerS = "R";
+        registerS.push_back(Instruction[2]);
+        string registerT = "R";
+        registerT.push_back(Instruction[3]);
+        string regSContent = Reg.GetRegisterContent(registerS);
+        string regTContent = Reg.GetRegisterContent(registerT);
     }
+
+    void Execute_789RST(Register &Reg, const string Instruction){  // 712F
+        int result;
+        cout << "Execution:" << endl;
+        string registerR = "R";
+        registerR.push_back(Instruction[1]);
+        string registerS = "R";
+        registerS.push_back(Instruction[2]);
+        string registerT = "R";
+        registerT.push_back(Instruction[3]);
+        
+        string regSContent = Reg.GetRegisterContent(registerS);
+        string regTContent = Reg.GetRegisterContent(registerT);
+
+
+        int decimal_regS = HexToDecimal(regSContent);
+        int decimal_regT = HexToDecimal(regTContent);
+
+        switch(Instruction[0]){
+            case '7':
+                result = decimal_regS | decimal_regT;
+                break;
+            case '8':
+                result = decimal_regS & decimal_regT;
+                break;
+            case '9':
+                result = decimal_regS ^ decimal_regT;
+                break;
+        }
+
+        
+
+        cout << "~~ RESULTS ~~   decimal_regS: " << decimal_regS << " | decimalRegT: " << decimal_regT << " | result: " << result << endl;
+        Reg.FindANDStore(registerR, DecToHex(result));
+    }
+
+
+    void Execute_ARxX(Memory &memory, Register &Reg, const string &Instruction) {
+        // Implementation here
+    }   
 
     void Execute_BRXY(Memory &memory, Register &Reg, const string &Instruction) {
         // Implementation here
     }
 
     void Execute_C000(Memory &memory, Register &Reg, const string &Instruction) {
+        // Implementation here
+    }
+
+    void Execute_DRXY(Memory &memory, Register &Reg, const string &Instruction) {
         // Implementation here
     }
 };
@@ -155,70 +278,20 @@ public:
 
 
 
-class Register{
-private:
-    static vector<pair<string, string>> Registers;
+
+class CPU : public ALU{
 public:
-    Register(){
-        if (Registers.empty()) {
-            Registers.resize(16, make_pair("R", "0"));
-        }
-    }
-    Register(const string &RegName, const string &InsideValue){
-        if (Registers.empty()) {
-            Registers.resize(16, make_pair("R", "0"));
-        }
-        StoreRegister(RegName, InsideValue);
-    }
-    void StoreRegister(const string &RegName, const string &InsideValue){
-        bool found = false;
-        for(auto &reg : Registers){
-            if(reg.first == RegName){
-                reg.second = InsideValue;
-                found = true;
-                break;
-            }
-        }
-        if(!found){
-            for(auto &reg : Registers){
-                if(reg.first == "R"){
-                    reg.first = RegName;
-                    reg.second = InsideValue;
-                    break;
-                }
-            }
-        }
-    }
-    string GetRegisterContent(const string &RegName) const{
-        for(const auto &reg : Registers){
-            if(reg.first == RegName){
-                return reg.second;
-            }
-        }
-        return "0";
-    }
-    static void Display_Registers(){
-        for(const auto &reg : Registers){
-            if(reg.first != "R"){
-                cout << "[ " << reg.first << ": " << reg.second << " ]" << endl;
-            }
-        }
-    }
-};
-
-vector<pair<string, string>> Register::Registers;
-
-
-class CPU : public ALU {
-private:
     string IR;
     Register Reg;
     CU Cu;
     int PC = 0;
-public:
-    void Execute_Step(const string &Step, Memory &memory) {
-        if (IsAValid_Instruction(Step)) {
-            switch (toupper(Step[0])) {
+
+    void SetRegister(Register& reg){
+        Reg = reg;
+    }
+    void Execute_Step(const string &Step, Memory &memory){
+        if(IsAValid_Instruction(Step)){
+            switch (toupper(Step[0])){
                 case '1':
                     Cu.Execute_1RXY(memory, Reg, Step);
                     break;
@@ -237,16 +310,28 @@ public:
                 case '6':
                     Cu.Execute_6RST(memory, Reg, Step);
                     break;
+                case '7':
+                case '8':
+                case '9':
+                    Cu.Execute_789RST(Reg, Step);
+                    break;
+                case 'A':
+                    Cu.Execute_ARxX(memory, Reg, Step);
+                    break;
                 case 'B':
                     Cu.Execute_BRXY(memory, Reg, Step);
                     break;
                 case 'C':
                     Cu.Execute_C000(memory, Reg, Step);
                     break;
+                case 'D':
+                    Cu.Execute_DRXY(memory, Reg, Step);
+                    break;
             }
         }
     }
 };
+
 
 
 
@@ -269,21 +354,33 @@ class Vole_Machine : public ALU{
 
 
 int main(){
-    // Memory mem;
-    // mem.StoreInstruction("102B");
-    // mem.StoreInstruction("2096");
-    // mem.StoreInstruction("2013");
-    // mem.StoreInstruction("1919");
-    // mem.StoreValue("10","FF");
-    // mem.DisplayMemory();
+    Memory mem;
+    mem.StoreInstruction("102B");
+    mem.StoreInstruction("2096");
+    mem.StoreInstruction("2013");
+    mem.StoreInstruction("1919");
+    mem.StoreInstruction("1244");
+    mem.StoreValue("10","FF");
+    cout << "---------" << mem.GetValue("05");  
 
-    // ALU test;
-    // cout << test.DecToHex(166) << endl;
-    // cout << test.HexToDecimal("FF") << endl;
+    Register reg;
+    reg.StoreRegister("R0","32");
+    reg.StoreRegister("R4","A4");
+    reg.StoreRegister("R2","AB");
+    mem.DisplayMemory();
+    reg.Display_Registers();
 
-    // Register reg;
-    // reg.StoreRegister("R0","55");
-    // reg.StoreRegister("R4","F5");
-    // reg.StoreRegister("R2","AB");
-    // reg.Display_Registers();
+    cout << "Executing 7RST with instruction '____':" << endl;
+
+    CPU Cpu;
+    Cpu.SetRegister(reg);
+    Cpu.Execute_Step("7504", mem);
+    Cpu.Execute_Step("8504", mem);
+    Cpu.Execute_Step("9504", mem);
+
+    cout << "After Execution of ____:" << endl;
+    reg.Display_Registers();
+    mem.DisplayMemory();
+
+    return 0;
 }
