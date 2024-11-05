@@ -13,8 +13,8 @@ using namespace std;
 // 1RXY [1058], Store in Register 0 whatever is in Memory address 58
 // 2RXY [2058], Store in Register 0 number 58 [XY]
 // 3RXY [31A1], Store in Memory A1 whatever in Register 1 
-// 40RS [4056], Store in Register 5 whatever in Register 5
-// 5RST, Add whatever is in Register S and in Register T [IN 2'S COMPLEMENT FORM] and put the result in Register 
+// 40RS [4056], Store in Register 6 whatever in Register 5
+// 5RST, Add whatever is in Register S and in Register T [IN 2'S COMPLEMENT FORM] and put the result in Register R
 // 6RST, same as 5RST but in floating-point form
 // 7RST, Bitwise (OR) the content of register S and T and put the result in register R ~BONUS~
 // 8RST, Bitwise (AND) the content of register S and T and put the result in register R ~BONUS~
@@ -23,6 +23,17 @@ using namespace std;
 // BRXY [B543], Compare whatever in Register 5 to whatever in Register 0, if both are Equal, Jump to memory place 43, if theyre not equal skip
 // C000, Stop Executing the porgram
 // DRXY, Jump to instruction in Cell XY, if content of register R is greater than the content in Register 0, data is interpreted as integers in two's complement notation ~BONUS~
+
+// Register 0: 05
+// Register 1: 00
+// Register 2: 01
+// Add Register 1 [08] to Register 2 [AC] and put the result in Register 1 [=01], Register 1: 01
+// Store in Memory [0][0] whatever in Register 1 [B4]
+// Store in Register 5 whatever in Register 0, Register 5 = 05
+// Store in Register 9 whatever in Reg1 and Reg5, Register 9 = 05
+// Bitwise OR Register 9 and Register 5 and put result in Register B
+// Bitwise AND Register 0 and Register B and put result in Register C
+// Bitwise XOR Register  and Register C and put result in Register F
 
 class Memory;
 class Register;
@@ -182,7 +193,7 @@ public:
         for(short i{0}; i < 16; i++){
             cout << "[  ";
             for(short j{0}; j < 16; j++){ 
-                if(Memory[i][j] == ""){
+                if(Memory[i][j] == "" || Memory[i][j] == "0"){
                     cout << "00";
                 }
                 else{
@@ -196,9 +207,10 @@ public:
     void Clear_Memory(){
         for(short i{0}; i < 16; i++){
             for(short j{0}; j < 16; j++){
-                Memory[i][j] = "00";
+                Memory[i][j] = "";
             }
         }
+        CurrentStorage = 0;
     }
 };
 
@@ -212,7 +224,6 @@ public:
         string registerName = "R";
         registerName += registerChar;
         Reg.StoreRegister(registerName, value);
-        cout << "Executed 1RXY: Stored value " << value << " from memory address " << memoryAddress << " into register " << registerName << endl;
     }
 
     
@@ -222,37 +233,65 @@ public:
         string registerName = "R";
         registerName += registerChar;
         Reg.StoreRegister(registerName, immediateValue);
-        cout << "Executed 2RXY: Stored immediate value " << immediateValue << " in register " << registerName << endl;
     }
 
-    void Execute_3RXY(Memory &memory, Register &Reg, const string &Instruction) {
-
+    void Execute_3RXY(Memory &memory, Register &reg, const string &Instruction) {
+        string registerName = "R";
+        registerName += Instruction[1];
+        string memory_address = Instruction.substr(2, 2);
+        string value = reg.GetRegisterContent(registerName);
+        memory.StoreValue(value, memory_address);
     }
 
-    void Execute_40RS(Memory &memory, Register &Reg, const string &Instruction) {
+    void Execute_40RS(Memory &memory, Register &reg, const string &instruction){
+        string register_R = "R";
+        register_R += instruction[2];
+        string register_S = "R";
+        register_S += instruction[3]; 
 
+        string value_R = reg.GetRegisterContent(register_R);
+        reg.StoreRegister(register_S, value_R);
     }
 
-    void Execute_5RST(Memory &memory, Register &Reg, const string &Instruction) {
-        
+
+    void Execute_5RST(Memory &memory, Register &reg, const string &instruction) {
+        string register_R = "R";
+        register_R += instruction[1];
+        string register_S = "R";
+        register_S += instruction[2];
+        string register_T = "R";
+        register_T += instruction[3];
+
+        int value_S = stoi(reg.GetRegisterContent(register_S), nullptr, 16);
+        int value_T = stoi(reg.GetRegisterContent(register_T), nullptr, 16);
+        int result = value_S + value_T;
+
+        string result_hex = DecToHex(result);
+        reg.StoreRegister(register_R, result_hex);
     }
 
-    void Execute_6RST(Memory &memory, Register &Reg, const string &Instruction) {
-        // int result;
-        // cout << "Execution:" << endl;
-        // string registerR = "R";
-        // registerR.push_back(Instruction[1]);
-        // string registerS = "R";
-        // registerS.push_back(Instruction[2]);
-        // string registerT = "R";
-        // registerT.push_back(Instruction[3]);
-        // string regSContent = Reg.GetRegisterContent(registerS);
-        // string regTContent = Reg.GetRegisterContent(registerT);
+    void Execute_6RST(Memory &memory, Register &reg, const string &instruction) {
+        string register_R = "R";
+        register_R += instruction[1];
+        string register_S = "R";
+        register_S += instruction[2];
+        string register_T = "R";
+        register_T += instruction[3];
+
+        string value_S_hex = reg.GetRegisterContent(register_S);
+        string value_T_hex = reg.GetRegisterContent(register_T);
+
+        float value_S_float = HexToDecimal(value_S_hex);
+        float value_T_float = HexToDecimal(value_T_hex);
+        float result_float = value_S_float + value_T_float;
+
+        string result_hex = DecToHex(result_float);
+
+        reg.StoreRegister(register_R, result_hex);
     }
 
     void Execute_789RST(Register &Reg, const string Instruction){  // 712F
         int result;
-        cout << "Execution:" << endl;
         string registerR = "R";
         registerR.push_back(Instruction[1]);
         string registerS = "R";
@@ -279,9 +318,6 @@ public:
                 break;
         }
 
-        
-
-        cout << "~~ RESULTS ~~   decimal_regS: " << decimal_regS << " | decimalRegT: " << decimal_regT << " | result: " << result << endl;
         Reg.FindANDStore(registerR, DecToHex(result));
     }
 
@@ -385,17 +421,18 @@ class Vole_Machine : public ALU{
     void DisplayEverything(){
         program_memory.DisplayMemory();
         processor.DisplayRegisters();
+        cout << "PC: " << processor.PC << endl;
     }
     void Restart(){
         program_memory.Clear_Memory();
         processor.clear_register();
+        processor.PC = 0;
     }
     void Execute_Program(){
         for(int i{1}; i < 16; i++){
             for(int j{0}; j < 16; j += 2){
                 Step.append(program_memory.GetValue(i,j));
                 Step.append(program_memory.GetValue(i,j+1));
-                cout << "Step: " << Step << endl;
                 if(IsAValid_Instruction(Step)){
                     processor.Execute_Step(Step, program_memory);
                 }
@@ -439,6 +476,7 @@ int main(){
                 break;
             case '3':
                 Machine.Restart();
+                file.close();
                 break;
             case '4':
                 Machine.DisplayEverything();
@@ -449,6 +487,7 @@ int main(){
                 cout << "Invalid Answer, Enter a valid one";
                 cin >> answer;
         }
+        
     }
 }
 
@@ -461,24 +500,19 @@ int main(){
     // mem.StoreInstruction("1244");
     // mem.StoreValue("10","FF");
     // cout << "---------" << mem.GetValue("05");  
-
     // Register reg;
     // reg.StoreRegister("R0","32");
     // reg.StoreRegister("R4","A4");
     // reg.StoreRegister("R2","AB");
     // mem.DisplayMemory();
-    // reg.Display_Registers();
-
-    // cout << "Executing 7RST with instruction '____':" << endl;
-
+    // reg.Display_Registers()
+    // cout << "Executing 7RST with instruction '____':" << endl
     // CPU Cpu;
     // Cpu.SetRegister(reg);
     // Cpu.Execute_Step("7504", mem);
     // Cpu.Execute_Step("8504", mem);
     // Cpu.Execute_Step("9504", mem);
-
     // cout << "After Execution of ____:" << endl;
     // reg.Display_Registers();
     // mem.DisplayMemory();
-
     // return 0;
