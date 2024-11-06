@@ -3,12 +3,8 @@
 int main(){
     Vole_Machine Machine;
     bool result = Menu(Machine);
-    if(result = true){
+    if(result){
         main();
     }
 }
-
-// g++ -o VoleMachine main.cpp VoleMachine.cpp
-
-// ./VoleMachine.exe
 
