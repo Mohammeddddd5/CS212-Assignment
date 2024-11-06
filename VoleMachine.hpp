@@ -88,9 +88,10 @@ private:
     Memory program_memory;
     string Step;
     int CurrentStep = 0;
-    bool AllStepsFinished = false;
 
 public:
+    bool AllStepsFinished = false;
+    
     void StoreInstructions(string filepath);
     void DisplayEverything();
     void Restart();
