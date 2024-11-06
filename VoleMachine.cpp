@@ -142,6 +142,7 @@ string Memory::GetValue(string Pattern){
     vector<int> Location = identify_memory(Pattern);
     return Memory[Location[0]][Location[1]];
 }
+
 string Memory::GetValue(int row, int column) const {
     return Memory[row][column];
 }
@@ -162,6 +163,7 @@ void Memory::DisplayMemory(){
         cout << "  ]" << endl;
     }
 }
+
 void Memory::Clear_Memory(){
     for(short i{0}; i < 16; i++){
         for(short j{0}; j < 16; j++){
@@ -209,7 +211,6 @@ void CU::Execute_40RS(Memory &memory, Register &reg, const string &instruction){
     reg.StoreRegister(register_S, value_R);
 }
 
-
 void CU::Execute_5RST(Memory &memory, Register &reg, const string &instruction) {
     string register_R = "R";
     register_R += instruction[1];
@@ -225,7 +226,6 @@ void CU::Execute_5RST(Memory &memory, Register &reg, const string &instruction) 
     string result_hex = DecToHex(result);
     reg.StoreRegister(register_R, result_hex);
 }
-
 
 void CU::Execute_6RST(Memory &memory, Register &reg, const string &instruction) {
     string register_R = "R";
@@ -290,7 +290,6 @@ void CU::Execute_789RST(Register &Reg, const string Instruction){
     Reg.FindANDStore(registerR, DecToHex(result));
 }
 
-
 void CU::Execute_ARxX(Memory &memory, Register &Reg, const string &Instruction) {
     // Implementation here
 }   
@@ -313,6 +312,7 @@ void CU::Execute_DRXY(Memory &memory, Register &Reg, const string &Instruction) 
 void CPU::SetRegister(Register& reg){
     Reg = reg;
 }
+
 void CPU::Execute_Step(const string &Step, Memory &memory){
     if(IsAValid_Instruction(Step)){
         switch (toupper(Step[0])){
@@ -354,23 +354,26 @@ void CPU::Execute_Step(const string &Step, Memory &memory){
         }
     }
 }
+
 void CPU::DisplayRegisters(){
     Reg.Display_Registers();
 }
+
 void CPU::clear_register(){
     Reg.Clear_Register();
 }
 
+
 ////////////////// Vole Machine Class //////////////////
 
 void Vole_Machine::StoreInstructions(string filepath){
+    processor.PC = 0;
     string line;
     fstream file(filepath, ios::in);
     while (!file.eof()){
         getline(file, line);
         if (IsAValid_Instruction(line)){
             program_memory.StoreInstruction(line);
-            processor.PC++;
         }
     }
 }
@@ -390,12 +393,17 @@ void Vole_Machine::Restart(){
 }
 
 void Vole_Machine::Execute_Program(){
+    if(AllStepsFinished == true){
+        cout << "All steps have been already executed." << endl;
+        return;
+    }
     for (int i = 1; i < 16; i++){
         for (int j = 0; j < 16; j += 2){
             Step.append(program_memory.GetValue(i, j));
             Step.append(program_memory.GetValue(i, j + 1));
             if (IsAValid_Instruction(Step)) {
                 processor.Execute_Step(Step, program_memory);
+                processor.PC++;
             }
             else{
                 AllStepsFinished = true;
@@ -404,9 +412,14 @@ void Vole_Machine::Execute_Program(){
             Step.clear();
         }
     }
+    
 }
 
 void Vole_Machine::Execute_OneStep(){
+    if(AllStepsFinished == true){
+        cout << "All steps have been already executed." << endl;
+        return;
+    }
     int row = 1 + CurrentStep/16;
     int col = (CurrentStep % 16) * 2;
 
@@ -421,15 +434,16 @@ void Vole_Machine::Execute_OneStep(){
     if (IsAValid_Instruction(Step)){
         processor.Execute_Step(Step, program_memory);
         cout << "Step number " << CurrentStep + 1 << " have been Executed." << endl;
-        CurrentStep++; 
+        CurrentStep++;
+        processor.PC++;
     }
     else{
         cout << "Invalid instruction at Step [" << CurrentStep + 1 << "]." << endl;
     }
-
     Step.clear();
 }
 
+////////////////// Main Menu //////////////////
 
 bool Menu(Vole_Machine& Machine){
     cout << "~ Vole Machine Program ~" << endl;
@@ -439,7 +453,7 @@ bool Menu(Vole_Machine& Machine){
     while(true){
         cout << "1) Load Program" << endl;
         cout << "2) Execute Program" << endl;
-        cout << "3) Execute Step By Step" << endl;
+        cout << "3) Execute One Step" << endl;
         cout << "4) Restart" << endl;
         cout << "5) Display Memory & Registers" << endl;
         cout << "6) Exit" << endl;
