@@ -400,48 +400,82 @@ public:
 
 
 
-
 class Vole_Machine : public ALU{
-    private:
+private:
     CPU processor;
     Memory program_memory;
     string Step;
-    public:
+    int CurrentStep = 0;  
+    bool AllStepsFinished = false;
+
+public:
     void StoreInstructions(string filepath){
         string line;
         fstream file(filepath, ios::in);
-        while(!file.eof()){
+        while (!file.eof()){
             getline(file, line);
-            if(IsAValid_Instruction(line)){
+            if (IsAValid_Instruction(line)){
                 program_memory.StoreInstruction(line);
                 processor.PC++;
             }
         }
     }
+
     void DisplayEverything(){
         program_memory.DisplayMemory();
         processor.DisplayRegisters();
         cout << "PC: " << processor.PC << endl;
     }
+
     void Restart(){
         program_memory.Clear_Memory();
         processor.clear_register();
         processor.PC = 0;
+        CurrentStep = 0;
+        AllStepsFinished = false; 
     }
+
     void Execute_Program(){
-        for(int i{1}; i < 16; i++){
-            for(int j{0}; j < 16; j += 2){
-                Step.append(program_memory.GetValue(i,j));
-                Step.append(program_memory.GetValue(i,j+1));
-                if(IsAValid_Instruction(Step)){
-                    processor.Execute_Step(Step, program_memory);
+        if(AllStepsFinished = false){
+            for (int i = 1; i < 16; i++){
+                for (int j = 0; j < 16; j += 2){
+                    Step.append(program_memory.GetValue(i, j));
+                    Step.append(program_memory.GetValue(i, j + 1));
+                    if (IsAValid_Instruction(Step)) {
+                        processor.Execute_Step(Step, program_memory);
+                    }
+                    else{
+                        AllStepsFinished = true;
+                        return;
+                    }
+                    Step.clear();
                 }
-                else{
-                    return;
-                }
-                Step.clear();
             }
         }
+    }
+
+    void Execute_OneStep(){
+        int row = 1 + CurrentStep/16;
+        int col = (CurrentStep % 16) * 2;
+
+        if (row >= 16 || col >= 16){
+            cout << "No more steps to execute." << endl;
+            return;
+        }
+
+        Step.append(program_memory.GetValue(row, col));
+        Step.append(program_memory.GetValue(row, col + 1));
+
+        if (IsAValid_Instruction(Step)){
+            processor.Execute_Step(Step, program_memory);
+            cout << "Step number " << CurrentStep + 1 << " have been Executed." << endl;
+            CurrentStep++; 
+        }
+        else{
+            cout << "Invalid instruction at Step [" << CurrentStep + 1 << "]." << endl;
+        }
+
+        Step.clear();
     }
 };
 
@@ -455,9 +489,10 @@ int main(){
     while(true){
         cout << "1) Load Program" << endl;
         cout << "2) Execute Program" << endl;
-        cout << "3) Restart" << endl;
-        cout << "4) Display Memory & Registers" << endl;
-        cout << "5) Exit" << endl;
+        cout << "3) Execute Step By Step" << endl;
+        cout << "4) Restart" << endl;
+        cout << "5) Display Memory & Registers" << endl;
+        cout << "6) Exit" << endl;
         cin >> answer;
         switch(answer){
             case '1':
@@ -475,13 +510,16 @@ int main(){
                 Machine.Execute_Program();
                 break;
             case '3':
+                Machine.Execute_OneStep();
+                break;
+            case '4':
                 Machine.Restart();
                 file.close();
                 break;
-            case '4':
+            case '5':
                 Machine.DisplayEverything();
                 break;
-            case '5':
+            case '6':
                 exit(1);
             default:
                 cout << "Invalid Answer, Enter a valid one";
