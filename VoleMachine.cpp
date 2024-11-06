@@ -397,6 +397,7 @@ void Vole_Machine::Execute_Program(){
         cout << "All steps have been already executed." << endl;
         return;
     }
+    processor.PC = 0;
     for (int i = 1; i < 16; i++){
         for (int j = 0; j < 16; j += 2){
             Step.append(program_memory.GetValue(i, j));
@@ -433,7 +434,7 @@ void Vole_Machine::Execute_OneStep(){
 
     if (IsAValid_Instruction(Step)){
         processor.Execute_Step(Step, program_memory);
-        cout << "Step number " << CurrentStep + 1 << " have been Executed." << endl;
+        cout << "Step number " << CurrentStep + 1 << " have been Executed: " << Step << endl;
         CurrentStep++;
         processor.PC++;
     }
