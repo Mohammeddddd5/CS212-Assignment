@@ -2,14 +2,14 @@
 
 ////////////////// ALU Class //////////////////
 
-vector<int> ALU::identify_memory(string Pattern) {
+vector<int> ALU::identify_memory(string Pattern){
     vector<int> index_array;
-    for (short i = 0; i < 2; i++) {
-        if (isdigit(Pattern[i])) {
+    for (short i = 0; i < 2; i++){
+        if (isdigit(Pattern[i])){
             index_array.push_back(Pattern[i] - '0');
         } 
-        else if (isalpha(Pattern[i])) {
-            switch (toupper(Pattern[i])) { 
+        else if (isalpha(Pattern[i])){
+            switch (toupper(Pattern[i])){ 
                 case 'A': index_array.push_back(10); break;
                 case 'B': index_array.push_back(11); break;
                 case 'C': index_array.push_back(12); break;
@@ -31,7 +31,7 @@ int ALU::HexToDecimal(string Hex){
     return stoi(Hex, nullptr, 16);
 }
 
-string ALU::DecToHex(int Dec) {
+string ALU::DecToHex(int Dec){
     stringstream ss;
     ss << hex << uppercase << Dec;
     return ss.str();
@@ -238,23 +238,18 @@ void CU::Execute_6RST(Memory &memory, Register &reg, const string &instruction) 
     string value_S_hex = reg.GetRegisterContent(register_S);
     string value_T_hex = reg.GetRegisterContent(register_T);
 
-    // Convert hex to floating point
     uint32_t int_rep_S = stoi(value_S_hex, nullptr, 16);
     uint32_t int_rep_T = stoi(value_T_hex, nullptr, 16);
 
-    // Use memcpy to interpret as float
     float float_S, float_T;
     std::memcpy(&float_S, &int_rep_S, sizeof(float));
     std::memcpy(&float_T, &int_rep_T, sizeof(float));
 
-    // Add floating-point values
     float result_float = float_S + float_T;
 
-    // Convert result back to int representation
     uint32_t int_result;
     std::memcpy(&int_result, &result_float, sizeof(float));
 
-    // Store as hex in register R
     string result_hex = DecToHex(int_result);
     reg.StoreRegister(register_R, result_hex);
 }
@@ -290,20 +285,46 @@ void CU::Execute_789RST(Register &Reg, const string Instruction){
     Reg.FindANDStore(registerR, DecToHex(result));
 }
 
-void CU::Execute_ARxX(Memory &memory, Register &Reg, const string &Instruction) {
-    // Implementation here
-}   
-
-void CU::Execute_BRXY(Memory &memory, Register &Reg, const string &Instruction) {
-    // Implementation here
+void CU::Execute_ARxX(Memory &memory, Register &reg, const string &instruction) {
+    string register_R = "R";
+    register_R += instruction[1];
+    string X = reg.GetRegisterContent(register_R);
+    unsigned int num;
+    std::stringstream ss;
+    ss << std::hex << X;
+    ss >> num;
+    int Z = HexToDecimal(string(1, instruction[3]));
+    unsigned int rotated = (num >> Z) | (num << (8 - Z)); 
+    rotated &= 0xFF;
+    std::stringstream result;
+    result << std::hex << std::setw(2) << std::setfill('0') << rotated;
+    string res = result.str();
+    transform(res.begin(), res.end(), res.begin(), ::toupper);
+    reg.FindANDStore(register_R, res);
 }
 
-void CU::Execute_C000(Memory &memory, Register &Reg, const string &Instruction) {
-    // Implementation here
+
+void CU::Execute_BRXY(Memory &memory, Register &reg, CPU &cpu, const string &instruction) {
+    string branch_address = instruction.substr(2, 2);
+    int register_R_value = stoi(reg.GetRegisterContent("R"), nullptr, 16);
+    int register_0_value = stoi(reg.GetRegisterContent("0"), nullptr, 16);
+    if (register_R_value > register_0_value) {
+        cpu.SetPC(HexToDecimal(branch_address));
+    } else {
+        cpu.SetPC(cpu.GetPC() + 1);
+    }
 }
 
-void CU::Execute_DRXY(Memory &memory, Register &Reg, const string &Instruction) {
-    // Implementation here
+
+void CU::Execute_DRXY(Memory &memory, Register &reg, const string &instruction) {
+    string register_name = "R";
+    register_name += instruction[1];
+    int decrement_value = HexToDecimal(instruction.substr(2, 2));
+
+    int register_value = HexToDecimal(reg.GetRegisterContent(register_name));
+    int result = register_value - decrement_value;
+
+    reg.StoreRegister(register_name, DecToHex(result));
 }
 
 ////////////////// CPU Class //////////////////
@@ -313,9 +334,28 @@ void CPU::SetRegister(Register& reg){
     Reg = reg;
 }
 
-void CPU::Execute_Step(const string &Step, Memory &memory){
-    if(IsAValid_Instruction(Step)){
-        switch (toupper(Step[0])){
+void CPU::JUMP(int X, int Y) {
+    StepCounter[0] = X;
+    StepCounter[1] = Y;
+}
+
+int CPU::GetPC(){
+    return PC;
+}
+
+void CPU::SetPC(int value) {
+    PC = value;
+}
+
+void CPU::Execute_Step(Memory &memory) {
+    int row = StepCounter[0];
+    int col = StepCounter[1] * 2;
+    string Result;
+    string Step = memory.GetValue(row, col) + memory.GetValue(row, col + 1);
+    transform(Step.begin(), Step.end(), Step.begin(), ::toupper);
+    
+    if (IsAValid_Instruction(Step)) {
+        switch(toupper(Step[0])) {
             case '1':
                 Cu.Execute_1RXY(memory, Reg, Step);
                 break;
@@ -343,15 +383,24 @@ void CPU::Execute_Step(const string &Step, Memory &memory){
                 Cu.Execute_ARxX(memory, Reg, Step);
                 break;
             case 'B':
-                Cu.Execute_BRXY(memory, Reg, Step);
+                Cu.Execute_BRXY(memory, Reg, *this, Step);
                 break;
             case 'C':
-                Cu.Execute_C000(memory, Reg, Step);
-                break;
+                return;
             case 'D':
                 Cu.Execute_DRXY(memory, Reg, Step);
                 break;
         }
+    }
+    else {
+        cout << "Invalid instruction at [" << StepCounter[0] << "][" << StepCounter[1] << "]" << endl;
+        return;
+    }
+    PC++;
+    StepCounter[1]++;
+    if (StepCounter[1] == 16) {
+        StepCounter[1] = 0;
+        StepCounter[0]++;
     }
 }
 
@@ -363,6 +412,13 @@ void CPU::clear_register(){
     Reg.Clear_Register();
 }
 
+void CPU::UpdateStepCounter() {
+    StepCounter[1] += 1;
+    if (StepCounter[1] == 16) {
+        StepCounter[1] = 0;
+        StepCounter[0] += 1; 
+    }
+}
 
 ////////////////// Vole Machine Class //////////////////
 
@@ -378,10 +434,13 @@ void Vole_Machine::StoreInstructions(string filepath){
     }
 }
 
-void Vole_Machine::DisplayEverything(){
+void Vole_Machine::DisplayEverything(bool print){
     program_memory.DisplayMemory();
     processor.DisplayRegisters();
-    cout << "PC: " << processor.PC << endl;
+    if(print){
+        cout << "PC: " << processor.PC << endl;
+        cout << "IR: " << processor.IR << endl;
+    }
 }
 
 void Vole_Machine::Restart(){
@@ -402,51 +461,67 @@ void Vole_Machine::Execute_Program(){
         for (int j = 0; j < 16; j += 2){
             Step.append(program_memory.GetValue(i, j));
             Step.append(program_memory.GetValue(i, j + 1));
-            if (IsAValid_Instruction(Step)) {
-                processor.Execute_Step(Step, program_memory);
-                processor.PC++;
+            transform(Step.begin(), Step.end(), Step.begin(), ::toupper);
+            if (IsAValid_Instruction(Step)){
+                if(Step[0] == 'C'){
+                    processor.PC++;
+                    AllStepsFinished = true;
+                    return;
+                }
+                processor.Execute_Step(program_memory);
             }
             else{
                 AllStepsFinished = true;
                 return;
             }
+            processor.IR = Step;
             Step.clear();
         }
     }
     
 }
 
-void Vole_Machine::Execute_OneStep(){
-    if(AllStepsFinished == true){
-        cout << "All steps have been already executed." << endl;
+void Vole_Machine::Execute_OneStep() {
+    if (AllStepsFinished) {
+        cout << "All steps have already been executed." << endl;
         return;
     }
-    int row = 1 + CurrentStep/16;
-    int col = (CurrentStep % 16) * 2;
-
-    if (row >= 16 || col >= 16){
-        cout << "No more steps to execute." << endl;
+    int row = 1 + (processor.PC / 8);
+    int col = (processor.PC % 8) * 2;
+    if (row >= 16) {
+        cout << "No more steps to execute: end of memory reached." << endl;
+        AllStepsFinished = true;
         return;
     }
-
     Step.append(program_memory.GetValue(row, col));
     Step.append(program_memory.GetValue(row, col + 1));
+    transform(Step.begin(), Step.end(), Step.begin(), ::toupper);
 
-    if (IsAValid_Instruction(Step)){
-        processor.Execute_Step(Step, program_memory);
-        cout << "Step number " << CurrentStep + 1 << " have been Executed: " << Step << endl;
-        CurrentStep++;
-        processor.PC++;
+
+    if (IsAValid_Instruction(Step)) {
+        if (Step[0] == 'C') {
+            cout << "Step: " << Step << " Has been Executed." << endl;
+            cout << "No more steps to execute: Cxxx reached." << endl;
+            processor.PC++;
+            AllStepsFinished = true;
+            return;
+        }
+        processor.Execute_Step(program_memory);
+        cout << "Step: " << Step << " Has been Executed." << endl;   
+    } else {
+        cout << "Invalid instruction at PC [" << processor.PC << "]: " << Step << endl;
+        AllStepsFinished = true;
+        return;
     }
-    else{
-        cout << "Invalid instruction at Step [" << CurrentStep + 1 << "]." << endl;
-    }
+
+    processor.IR = Step;
     Step.clear();
 }
 
 ////////////////// Main Menu //////////////////
 
 bool Menu(Vole_Machine& Machine){
+    bool print_type = true;
     cout << "~ Vole Machine Program ~" << endl;
     char answer;
     string filename;
@@ -473,6 +548,7 @@ bool Menu(Vole_Machine& Machine){
                 break;
             case '2':
                 Machine.Execute_Program();
+                print_type = false;
                 break;
             case '3':
                 Machine.Execute_OneStep();
@@ -483,7 +559,7 @@ bool Menu(Vole_Machine& Machine){
                 return true; 
                 break;
             case '5':
-                Machine.DisplayEverything();
+                Machine.DisplayEverything(print_type);
                 break;
             case '6':
                 exit(1);
