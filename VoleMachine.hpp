@@ -18,6 +18,8 @@ using namespace std;
 
 class Memory;
 class Register;
+class CPU;
+
 
 class ALU {
 protected:
@@ -65,8 +67,7 @@ public:
     void Execute_6RST(Memory &memory, Register &reg, const string &instruction);
     void Execute_789RST(Register &Reg, const string Instruction);
     void Execute_ARxX(Memory &memory, Register &Reg, const string &Instruction);
-    void Execute_BRXY(Memory &memory, Register &Reg, const string &Instruction);
-    void Execute_C000(Memory &memory, Register &Reg, const string &Instruction);
+    void Execute_BRXY(Memory &memory, Register &reg, CPU &cpu, const string &instruction);
     void Execute_DRXY(Memory &memory, Register &Reg, const string &Instruction);
 };
 
@@ -76,11 +77,17 @@ public:
     Register Reg;
     CU Cu;
     int PC = 0;
+    int StepCounter[2] = {1, 0};
     void SetRegister(Register& reg);
-    void Execute_Step(const string &Step, Memory &memory);
+    void Execute_Step(Memory &memory);
     void DisplayRegisters();
     void clear_register();
+    void UpdateStepCounter();
+    void JUMP(int X, int Y);
+    void SetPC(int value);
+    int GetPC();
 };
+
 
 class Vole_Machine : public ALU {
 private:
@@ -91,9 +98,9 @@ private:
 
 public:
     bool AllStepsFinished = false;
-    
+
     void StoreInstructions(string filepath);
-    void DisplayEverything();
+    void DisplayEverything(bool print);
     void Restart();
     void Execute_Program();
     void Execute_OneStep();
@@ -102,3 +109,4 @@ public:
 bool Menu(Vole_Machine& Machine);
 
 #endif
+
